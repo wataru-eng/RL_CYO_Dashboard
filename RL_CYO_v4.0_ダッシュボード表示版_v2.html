@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL_CYO ダッシュボード ビジュアル表示版 v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    padding: 24px 32px;
+    border-bottom: 1px solid #1e293b;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  header h1 { font-size: 20px; font-weight: 700; color: white; }
+  header .meta { font-size: 12px; color: #94a3b8; }
+  header .meta strong { color: #60a5fa; }
+
+  .period-tabs {
+    display: flex; gap: 4px; padding: 16px 32px;
+    background: #1e293b; border-bottom: 1px solid #334155;
+  }
+  .period-tabs button {
+    padding: 8px 18px; background: transparent; border: 1px solid #334155;
+    color: #94a3b8; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s;
+  }
+  .period-tabs button:hover { color: white; border-color: #60a5fa; }
+  .period-tabs button.active {
+    background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600;
+  }
+
+  main { padding: 24px 32px 60px; max-width: 1400px; margin: 0 auto; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .kpi {
+    background: #1e293b; border-radius: 12px; padding: 18px 20px;
+    border: 1px solid #334155;
+  }
+  .kpi .label { font-size: 11px; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .kpi .value { font-size: 28px; font-weight: 700; color: white; line-height: 1.1; }
+  .kpi .sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .kpi.accent .value { color: #60a5fa; }
+  .kpi.warn .value { color: #fbbf24; }
+  .kpi.danger .value { color: #f87171; }
+  .kpi.success .value { color: #4ade80; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #1e293b; border-radius: 12px; padding: 20px;
+    border: 1px solid #334155;
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #334155;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: white;
+    display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { color: #60a5fa; }
+  .card-meta { font-size: 11px; color: #64748b; }
+
+  /* ★ ソートボタングループ */
+  .sort-group {
+    display: flex; gap: 2px; padding: 3px;
+    background: #0f172a; border-radius: 8px; width: fit-content;
+    margin-bottom: 14px;
+  }
+  .sort-group button {
+    padding: 5px 12px; background: transparent; border: none;
+    color: #94a3b8; cursor: pointer; font-size: 11px; border-radius: 5px;
+    transition: all 0.15s;
+  }
+  .sort-group button:hover { color: white; }
+  .sort-group button.active { background: #3b82f6; color: white; font-weight: 600; }
+  .sort-group button .arrow { display: inline-block; margin-left: 4px; font-size: 9px; }
+
+  /* ランキング */
+  .ranking { display: flex; flex-direction: column; gap: 8px; }
+  .rank-item {
+    display: grid; grid-template-columns: 24px 1fr auto auto; gap: 10px;
+    align-items: center; padding: 8px 10px; background: #0f172a;
+    border-radius: 6px; font-size: 13px;
+  }
+  .rank-num { font-weight: 700; color: #64748b; font-size: 12px; text-align: center; }
+  .rank-name { color: #e2e8f0; }
+  .rank-bar-wrap { width: 80px; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; }
+  .rank-bar { height: 100%; border-radius: 3px; }
+  .rank-bar.green { background: #4ade80; }
+  .rank-bar.yellow { background: #fbbf24; }
+  .rank-bar.red { background: #f87171; }
+  .rank-value { font-weight: 600; font-size: 13px; min-width: 60px; text-align: right; }
+  .rank-value.green { color: #4ade80; }
+  .rank-value.yellow { color: #fbbf24; }
+  .rank-value.red { color: #f87171; }
+
+  .bar-chart { display: flex; flex-direction: column; gap: 8px; }
+  .bar-item { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 12px; }
+  .bar-label { display: flex; justify-content: space-between; color: #cbd5e1; font-size: 12px; }
+  .bar-track { width: 100%; height: 18px; background: #0f172a; border-radius: 4px; overflow: hidden; display: flex; }
+  .bar-seg { height: 100%; transition: all 0.3s; }
+  .bar-seg.print { background: #3b82f6; }
+  .bar-seg.emb   { background: #06b6d4; }
+  .bar-seg.pre   { background: #8b5cf6; }
+  .bar-value { font-weight: 600; color: white; }
+
+  .legend { display: flex; gap: 16px; font-size: 11px; color: #94a3b8; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* ★ ソート可能テーブル */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th, .data-table td {
+    padding: 8px 10px; text-align: right; border-bottom: 1px solid #334155;
+  }
+  .data-table th {
+    text-align: right; color: #94a3b8; font-weight: 600;
+    background: #0f172a; font-size: 11px;
+    cursor: pointer; user-select: none; transition: all 0.15s;
+    white-space: nowrap; position: relative;
+  }
+  .data-table th:hover { color: white; background: #1e293b; }
+  .data-table th:first-child, .data-table td:first-child { text-align: left; }
+  .data-table th.sort-asc::after { content: ' ▲'; color: #60a5fa; font-size: 9px; }
+  .data-table th.sort-desc::after { content: ' ▼'; color: #60a5fa; font-size: 9px; }
+  .data-table tr:hover td { background: #0f172a; }
+  .data-table .total-row { background: #1e293b; font-weight: 700; }
+  .data-table .total-row td { color: #fbbf24; border-top: 2px solid #fbbf24; }
+
+  .tabs {
+    display: flex; gap: 2px; margin-bottom: 12px; padding: 3px;
+    background: #0f172a; border-radius: 8px; width: fit-content;
+  }
+  .tabs button {
+    padding: 6px 14px; background: transparent; border: none;
+    color: #94a3b8; cursor: pointer; font-size: 12px; border-radius: 5px;
+  }
+  .tabs button.active { background: #3b82f6; color: white; }
+
+  /* 送料明細 */
+  .ship-table-wrap { max-height: 350px; overflow-y: auto; border-radius: 6px; }
+  .ship-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ship-table th {
+    position: sticky; top: 0; background: #0f172a; padding: 8px;
+    color: #94a3b8; font-size: 11px; text-align: left; z-index: 1;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .ship-table th:hover { color: white; }
+  .ship-table th.sort-asc::after { content: ' ▲'; color: #60a5fa; font-size: 9px; }
+  .ship-table th.sort-desc::after { content: ' ▼'; color: #60a5fa; font-size: 9px; }
+  .ship-table th:last-child { text-align: right; }
+  .ship-table td { padding: 6px 8px; border-bottom: 1px solid #1e293b; }
+  .ship-table tr:hover td { background: #0f172a; }
+  .ship-table .ship-store { color: #60a5fa; }
+  .ship-table .ship-fee { text-align: right; font-weight: 600; color: #4ade80; }
+  .ship-table .ship-fee.zero { color: #64748b; }
+
+  .hidden { display: none !important; }
+
+  /* バーチャート用ソートセレクト */
+  select.chart-sort {
+    padding: 4px 10px; background: #0f172a; color: #cbd5e1;
+    border: 1px solid #334155; border-radius: 6px; font-size: 12px;
+    cursor: pointer;
+  }
+  select.chart-sort:hover { border-color: #60a5fa; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+  .proto-banner {
+    background: linear-gradient(90deg, #f59e0b 0%, #dc2626 100%);
+    color: white; padding: 8px 16px; text-align: center;
+    font-size: 12px; letter-spacing: 0.5px;
+  }
+  footer { text-align: center; padding: 32px; color: #64748b; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="proto-banner">
+  🎨 並び替え機能付き / 列ヘッダー or ボタンをクリックで並び替え
+</div>
+
+<header>
+  <div>
+    <h1>📊 RL_CYO ダッシュボード</h1>
+    <div class="meta">統合管理ビュー — 集計の可視化</div>
+  </div>
+  <div class="meta">
+    最終更新: <strong id="last-update">2026/05/15 18:55</strong>
+  </div>
+</header>
+
+<div class="period-tabs">
+  <button class="active" onclick="switchPeriod('caravan')">【Caravan】2026SS</button>
+  <button onclick="switchPeriod('permanent')">【常設】2026</button>
+</div>
+
+<main>
+  <section class="kpi-row" id="kpi-row"></section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">🏪</span> 店舗別ミス率</div>
+      </div>
+      <div class="sort-group" id="store-sort">
+        <button data-sort="name" class="active">店舗名順<span class="arrow">▲</span></button>
+        <button data-sort="rate">ミス率順<span class="arrow"></span></button>
+        <button data-sort="total">製作数順<span class="arrow"></span></button>
+        <button data-sort="batsu">✕件数順<span class="arrow"></span></button>
+      </div>
+      <div class="ranking" id="store-miss-ranking"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">👷</span> 作業者別ミス率</div>
+      </div>
+      <div class="sort-group" id="worker-sort">
+        <button data-sort="rate" class="active">ミス率順<span class="arrow">▼</span></button>
+        <button data-sort="total">製作数順<span class="arrow"></span></button>
+        <button data-sort="batsu">✕件数順<span class="arrow"></span></button>
+      </div>
+      <div class="ranking" id="worker-miss-ranking"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-bottom:20px">
+    <div class="card-head">
+      <div class="card-title"><span class="icon">📦</span> 店舗別 製作数構成</div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <span class="card-meta">並び替え:</span>
+        <select class="chart-sort" id="chart-sort">
+          <option value="total-desc">合計の多い順</option>
+          <option value="total-asc">合計の少ない順</option>
+          <option value="print-desc">プリント多い順</option>
+          <option value="emb-desc">刺繍多い順</option>
+          <option value="name-asc">店舗名 A→Z</option>
+        </select>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>プリント計</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>刺繍計</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>前処理</div>
+    </div>
+    <div class="bar-chart" id="production-chart"></div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">🎨</span> プリント＆刺繍 内訳</div>
+        <div class="card-meta">列ヘッダークリックで並び替え</div>
+      </div>
+      <div class="tabs">
+        <button class="active" onclick="switchDetailTab('print')">プリント</button>
+        <button onclick="switchDetailTab('embroidery')">刺繍</button>
+      </div>
+      <div id="detail-print-wrap">
+        <table class="data-table" id="detail-print-table"></table>
+      </div>
+      <div id="detail-emb-wrap" class="hidden">
+        <table class="data-table" id="detail-emb-table"></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="icon">📋</span> 製作数合計テーブル</div>
+        <div class="card-meta">列ヘッダークリックで並び替え</div>
+      </div>
+      <table class="data-table" id="production-table"></table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title"><span class="icon">🚚</span> 送料明細</div>
+      <div class="card-meta" id="ship-meta"></div>
+    </div>
+    <div class="ship-table-wrap">
+      <table class="ship-table">
+        <thead>
+          <tr id="ship-thead">
+            <th data-col="store">店舗</th>
+            <th data-col="tab">発送内容（タブ名）</th>
+            <th data-col="no">送り状No</th>
+            <th data-col="fee">送料</th>
+          </tr>
+        </thead>
+        <tbody id="ship-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>RL_CYO ダッシュボード v4.0 ビジュアル表示版 v2 — 並び替え対応</footer>
+
+<script>
+// ==========================================
+// データ
+// ==========================================
+const data = {
+  caravan: {
+    name: '【Caravan】2026SS',
+    updatedAt: '2026/05/15 18:55',
+    summary: { totalProduction: 433, maru: 355, sankaku: 11, batsu: 5, missRate: 1.35, stores: 10 },
+    stores: [
+      { name: '4/8-14 伊勢丹静岡Combine', print: 17, emb: 3, pre: 6, total: 20, ship: 1550, maru: 18, sankaku: 0, batsu: 1, rate: 5.26 },
+      { name: '4/15-21 阪急西宮MPO', print: 79, emb: 14, pre: 4, total: 93, ship: 4850, maru: 108, sankaku: 0, batsu: 2, rate: 1.82 },
+      { name: '4/25-5/6 トキハ大分MPO', print: 31, emb: 11, pre: 1, total: 42, ship: 0, maru: 54, sankaku: 1, batsu: 1, rate: 1.79 },
+      { name: '4/29-5/5 LaLaport愛知東郷', print: 49, emb: 23, pre: 0, total: 72, ship: 0, maru: 40, sankaku: 1, batsu: 1, rate: 2.38 },
+      { name: '4/29-5/5 そごう広島Dual', print: 28, emb: 20, pre: 4, total: 48, ship: 0, maru: 41, sankaku: 2, batsu: 0, rate: 0 },
+      { name: '4/29-5/5 高島屋玉川MPO', print: 44, emb: 20, pre: 1, total: 64, ship: 0, maru: 41, sankaku: 4, batsu: 0, rate: 0 },
+      { name: '4/29-5/5 高島屋日本橋', print: 26, emb: 4, pre: 0, total: 30, ship: 0, maru: 23, sankaku: 3, batsu: 0, rate: 0 },
+      { name: '4/29-5/5 福屋広島Combine', print: 19, emb: 4, pre: 0, total: 23, ship: 0, maru: 19, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '5/1-7 松坂屋静岡', print: 12, emb: 10, pre: 1, total: 22, ship: 0, maru: 10, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '5/13-19 伊勢丹新潟WPO', print: 8, emb: 11, pre: 0, total: 19, ship: 0, maru: 1, sankaku: 0, batsu: 0, rate: 0 }
+    ],
+    workers: [
+      { name: '水島', total: 40, maru: 31, sankaku: 6, batsu: 3, rate: 7.50 },
+      { name: '関谷', total: 23, maru: 21, sankaku: 1, batsu: 1, rate: 4.35 },
+      { name: '白石', total: 47, maru: 45, sankaku: 1, batsu: 1, rate: 2.13 },
+      { name: '畠山', total: 57, maru: 56, sankaku: 1, batsu: 0, rate: 0 },
+      { name: '渡部', total: 97, maru: 96, sankaku: 1, batsu: 0, rate: 0 },
+      { name: '徳永', total: 100, maru: 99, sankaku: 1, batsu: 0, rate: 0 },
+      { name: '清水', total: 6, maru: 6, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '佐々木', total: 1, maru: 1, sankaku: 0, batsu: 0, rate: 0 }
+    ],
+    print: [
+      { name: '4/8-14 伊勢丹静岡', white: '5', dark: '8 (再2)', tote: '2', bottle: '0', total: '15 (再2)', _white: 5, _dark: 10, _tote: 2, _bottle: 0, _total: 17 },
+      { name: '4/15-21 阪急西宮MPO', white: '35', dark: '28', tote: '12', bottle: '4', total: '79', _white: 35, _dark: 28, _tote: 12, _bottle: 4, _total: 79 },
+      { name: '4/25-5/6 トキハ大分', white: '11', dark: '11', tote: '5 (再1)', bottle: '3', total: '30 (再1)', _white: 11, _dark: 11, _tote: 6, _bottle: 3, _total: 31 },
+      { name: '4/29-5/5 LaLaport', white: '31', dark: '12', tote: '4', bottle: '2', total: '49', _white: 31, _dark: 12, _tote: 4, _bottle: 2, _total: 49 },
+      { name: '4/29-5/5 そごう広島', white: '15', dark: '10', tote: '2', bottle: '1', total: '28', _white: 15, _dark: 10, _tote: 2, _bottle: 1, _total: 28 },
+      { name: '4/29-5/5 高島屋玉川', white: '21', dark: '19', tote: '2', bottle: '2', total: '44', _white: 21, _dark: 19, _tote: 2, _bottle: 2, _total: 44 },
+      { name: '4/29-5/5 高島屋日本橋', white: '10', dark: '7', tote: '7', bottle: '2', total: '26', _white: 10, _dark: 7, _tote: 7, _bottle: 2, _total: 26 },
+      { name: '4/29-5/5 福屋広島', white: '8', dark: '4', tote: '5', bottle: '2', total: '19', _white: 8, _dark: 4, _tote: 5, _bottle: 2, _total: 19 },
+      { name: '5/1-7 松坂屋静岡', white: '6', dark: '5', tote: '0', bottle: '1', total: '12', _white: 6, _dark: 5, _tote: 0, _bottle: 1, _total: 12 },
+      { name: '5/13-19 伊勢丹新潟', white: '3', dark: '3', tote: '0', bottle: '2', total: '8', _white: 3, _dark: 3, _tote: 0, _bottle: 2, _total: 8 }
+    ],
+    printTotal: { name: '★合計', white: '145', dark: '107 (再2)', tote: '39 (再1)', bottle: '19', total: '310 (再3)' },
+    emb: [
+      { name: '4/8-14 伊勢丹静岡', p1000: 0, p2000: 1, p3000: 0, p4000: 0, p4500: 2, total: 3 },
+      { name: '4/15-21 阪急西宮MPO', p1000: 2, p2000: 4, p3000: 2, p4000: 0, p4500: 6, total: 14 },
+      { name: '4/25-5/6 トキハ大分', p1000: 2, p2000: 4, p3000: 3, p4000: 0, p4500: 2, total: 11 },
+      { name: '4/29-5/5 LaLaport', p1000: 2, p2000: 11, p3000: 7, p4000: 0, p4500: 3, total: 23 },
+      { name: '4/29-5/5 そごう広島', p1000: 0, p2000: 9, p3000: 0, p4000: 0, p4500: 11, total: 20 },
+      { name: '4/29-5/5 高島屋玉川', p1000: 0, p2000: 11, p3000: 4, p4000: 0, p4500: 5, total: 20 },
+      { name: '4/29-5/5 高島屋日本橋', p1000: 1, p2000: 2, p3000: 0, p4000: 0, p4500: 1, total: 4 },
+      { name: '4/29-5/5 福屋広島', p1000: 4, p2000: 0, p3000: 0, p4000: 0, p4500: 0, total: 4 },
+      { name: '5/1-7 松坂屋静岡', p1000: 0, p2000: 2, p3000: 4, p4000: 0, p4500: 4, total: 10 },
+      { name: '5/13-19 伊勢丹新潟', p1000: 2, p2000: 2, p3000: 4, p4000: 0, p4500: 3, total: 11 }
+    ],
+    embTotal: { name: '★合計', p1000: 13, p2000: 46, p3000: 24, p4000: 0, p4500: 37, total: 120 },
+    shipping: [
+      { store: '4/15-21 阪急西宮MPO', tab: '①(刺繍)阪急西宮MPO_4/6着_ユニフォーム', no: '451334322294', fee: 890 },
+      { store: '4/15-21 阪急西宮MPO', tab: '②(刺繍)阪急西宮MPO_4/17着_4/15オーダー', no: '451334322596', fee: 990 },
+      { store: '4/15-21 阪急西宮MPO', tab: '③(刺繍)阪急西宮MPO_4/20着_4/15~4/16オーダー', no: '451334322806', fee: 990 },
+      { store: '4/15-21 阪急西宮MPO', tab: '④(刺繍)阪急西宮MPO_4/20着_4/17オーダー', no: '③に同梱', fee: 0 },
+      { store: '4/15-21 阪急西宮MPO', tab: '⑤(刺繍)阪急西宮MPO_4/20着_4/18オーダー', no: '451334322810', fee: 990 },
+      { store: '4/15-21 阪急西宮MPO', tab: '⑥(刺繍)阪急西宮MPO_4/21着_4/19オーダー', no: '⑤に同梱', fee: 0 },
+      { store: '4/15-21 阪急西宮MPO', tab: '⑦(刺繍)阪急西宮MPO_4/22着_4/20オーダー', no: '451334322821', fee: 990 },
+      { store: '4/15-21 阪急西宮MPO', tab: '⑧(刺繍)阪急西宮MPO_4/23着_4/21オーダー', no: '⑦に同梱', fee: 0 },
+      { store: '4/8-14 伊勢丹静岡Combine', tab: '①(刺繍)伊勢丹静岡_4/14着', no: '451334322526', fee: 890 },
+      { store: '4/8-14 伊勢丹静岡Combine', tab: '①(刺繍)伊勢丹静岡_4/14着', no: '451334322644', fee: 660 },
+      { store: '4/8-14 伊勢丹静岡Combine', tab: '②(刺繍)伊勢丹静岡_4/16', no: '①同梱', fee: 0 },
+      { store: '4/8-14 伊勢丹静岡Combine', tab: '③(刺繍)伊勢丹静岡_4/17着', no: '①同梱', fee: 0 },
+      { store: '4/25-5/6 トキハ大分MPO', tab: '①(刺繍)トキハ大分_4/9着_ユニフォーム', no: '451334322390', fee: 0 }
+    ]
+  },
+  permanent: {
+    name: '【常設】2026',
+    updatedAt: '2026/05/15 19:08',
+    summary: { totalProduction: 550, maru: 10, sankaku: 2, batsu: 1, missRate: 7.69, stores: 16 },
+    stores: [
+      { name: '阪急梅田 / 5月', print: 9, emb: 4, pre: 1, total: 13, ship: 0, maru: 5, sankaku: 2, batsu: 1, rate: 12.5 },
+      { name: '阪急梅田 / 3月', print: 7, emb: 2, pre: 0, total: 9, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '阪急梅田 / 2月', print: 3, emb: 5, pre: 0, total: 8, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '阪急梅田 / 4月', print: 1, emb: 7, pre: 0, total: 8, ship: 0, maru: 5, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '阪急梅田 / 1月', print: 4, emb: 3, pre: 0, total: 7, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '表参道 / 2月', print: 1, emb: 377, pre: 0, total: 378, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '表参道 / 1月', print: 31, emb: 90, pre: 4, total: 121, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '表参道 / 3月', print: 0, emb: 6, pre: 0, total: 6, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '表参道 / 4月', print: 0, emb: 0, pre: 0, total: 0, ship: 0, maru: 0, sankaku: 0, batsu: 0, rate: 0 }
+    ],
+    workers: [
+      { name: '関谷', total: 5, maru: 2, sankaku: 2, batsu: 1, rate: 20.00 },
+      { name: '畠山', total: 1, maru: 1, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '渡部', total: 4, maru: 4, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '白石', total: 2, maru: 2, sankaku: 0, batsu: 0, rate: 0 },
+      { name: '徳永', total: 1, maru: 1, sankaku: 0, batsu: 0, rate: 0 }
+    ],
+    print: [
+      { name: '阪急梅田 / 1月', white: '0', dark: '0', tote: '3', bottle: '1', total: '4', _white: 0, _dark: 0, _tote: 3, _bottle: 1, _total: 4 },
+      { name: '阪急梅田 / 5月', white: '5', dark: '2', tote: '2', bottle: '0', total: '9', _white: 5, _dark: 2, _tote: 2, _bottle: 0, _total: 9 },
+      { name: '阪急梅田 / 3月', white: '3', dark: '3', tote: '1', bottle: '0', total: '7', _white: 3, _dark: 3, _tote: 1, _bottle: 0, _total: 7 },
+      { name: '阪急梅田 / 2月', white: '2', dark: '0', tote: '1', bottle: '0', total: '3', _white: 2, _dark: 0, _tote: 1, _bottle: 0, _total: 3 },
+      { name: '表参道 / 1月', white: '5', dark: '18', tote: '4', bottle: '1', total: '28', _white: 5, _dark: 18, _tote: 4, _bottle: 1, _total: 28 }
+    ],
+    printTotal: { name: '★合計', white: '16', dark: '23', tote: '12', bottle: '2', total: '53' },
+    emb: [
+      { name: '阪急梅田 / 5月', p1000: 1, p2000: 2, p3000: 1, p4000: 0, p4500: 0, total: 4 },
+      { name: '阪急梅田 / 4月', p1000: 1, p2000: 3, p3000: 1, p4000: 0, p4500: 2, total: 7 },
+      { name: '阪急梅田 / 2月', p1000: 0, p2000: 0, p3000: 2, p4000: 0, p4500: 3, total: 5 },
+      { name: '表参道 / 2月', p1000: 2, p2000: 250, p3000: 125, p4000: 0, p4500: 0, total: 377 },
+      { name: '表参道 / 1月', p1000: 8, p2000: 38, p3000: 12, p4000: 0, p4500: 32, total: 90 }
+    ],
+    embTotal: { name: '★合計', p1000: 14, p2000: 297, p3000: 143, p4000: 0, p4500: 40, total: 494 },
+    shipping: [
+      { store: '表参道 / 1月', tab: '①(刺繍)表参道_1/7着', no: '451202214142', fee: 0 },
+      { store: '表参道 / 1月', tab: '②(刺繍)表参道_1/8着', no: '①に同梱', fee: 0 },
+      { store: '表参道 / 1月', tab: '③(刺繍)表参道_1/9着', no: '451202214083', fee: 0 },
+      { store: '阪急梅田 / 4月', tab: '①(刺繍)阪急梅田_4/9着', no: '451334322331', fee: 0 },
+      { store: '阪急梅田 / 5月', tab: '①(刺繍)阪急梅田_5/7着', no: '451335142005', fee: 0 }
+    ]
+  }
+};
+
+// ==========================================
+// ソート状態
+// ==========================================
+const sortState = {
+  storeMissCol: 'name', storeMissDir: 'asc',
+  workerMissCol: 'rate', workerMissDir: 'desc',
+  chartSort: 'total-desc',
+  productionCol: null, productionDir: 'asc',
+  printCol: null, printDir: 'asc',
+  embCol: null, embDir: 'asc',
+  shipCol: null, shipDir: 'asc'
+};
+
+let currentPeriod = 'caravan';
+
+// ==========================================
+// 共通ソート関数
+// ==========================================
+function genericSort(arr, col, dir) {
+  const sorted = [...arr].sort((a, b) => {
+    const va = a[col], vb = b[col];
+    if (typeof va === 'string') {
+      return dir === 'asc' ? va.localeCompare(vb, 'ja') : vb.localeCompare(va, 'ja');
+    }
+    return dir === 'asc' ? va - vb : vb - va;
+  });
+  return sorted;
+}
+
+function toggleDir(currentCol, newCol, currentDir) {
+  if (currentCol === newCol) {
+    return currentDir === 'asc' ? 'desc' : 'asc';
+  }
+  return 'desc';
+}
+
+// ==========================================
+// 期間切替
+// ==========================================
+function switchPeriod(period) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-tabs button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  render();
+}
+
+function switchDetailTab(tab) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('detail-print-wrap').classList.toggle('hidden', tab !== 'print');
+  document.getElementById('detail-emb-wrap').classList.toggle('hidden', tab !== 'embroidery');
+}
+
+function rateColor(rate) {
+  if (rate >= 10) return 'red';
+  if (rate >= 5) return 'yellow';
+  return 'green';
+}
+
+// ==========================================
+// 各セクションのレンダリング
+// ==========================================
+function renderKPI(d) {
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi accent">
+      <div class="label">総製作数</div>
+      <div class="value">${d.summary.totalProduction.toLocaleString()}</div>
+      <div class="sub">${d.name}</div>
+    </div>
+    <div class="kpi success">
+      <div class="label">対象店舗</div>
+      <div class="value">${d.summary.stores}</div>
+      <div class="sub">${currentPeriod === 'caravan' ? 'シーズン店舗' : '店舗×月'}</div>
+    </div>
+    <div class="kpi ${d.summary.missRate >= 5 ? 'danger' : d.summary.missRate >= 2 ? 'warn' : 'success'}">
+      <div class="label">ミス率</div>
+      <div class="value">${d.summary.missRate.toFixed(2)}%</div>
+      <div class="sub">〇${d.summary.maru} / △${d.summary.sankaku} / ✕${d.summary.batsu}</div>
+    </div>
+    <div class="kpi">
+      <div class="label">送料合計</div>
+      <div class="value">¥${d.stores.reduce((s, x) => s + x.ship, 0).toLocaleString()}</div>
+      <div class="sub">配送費用累計</div>
+    </div>
+  `;
+}
+
+function renderStoreMiss(d) {
+  let sorted = genericSort(d.stores, sortState.storeMissCol, sortState.storeMissDir);
+  // ミス率/製作数/✕件数で並べる場合のみ、データなし店舗を末尾に
+  // 店舗名順の場合は純粋なA→Z（バーチャートの並び順と揃える）
+  if (sortState.storeMissCol !== 'name') {
+    sorted.sort((a, b) => {
+      const aHas = a.maru + a.sankaku + a.batsu > 0;
+      const bHas = b.maru + b.sankaku + b.batsu > 0;
+      if (aHas !== bHas) return bHas - aHas;
+      return 0;
+    });
+  }
+  document.getElementById('store-miss-ranking').innerHTML = sorted.map((s, i) => {
+    const c = rateColor(s.rate);
+    return `
+      <div class="rank-item">
+        <div class="rank-num">${i + 1}</div>
+        <div class="rank-name">${s.name}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar ${c}" style="width:${Math.min(s.rate * 5, 100)}%"></div></div>
+        <div class="rank-value ${c}">${s.rate.toFixed(2)}%</div>
+      </div>
+    `;
+  }).join('');
+  // ボタンの矢印更新
+  document.querySelectorAll('#store-sort button').forEach(b => {
+    const isActive = b.dataset.sort === sortState.storeMissCol;
+    b.classList.toggle('active', isActive);
+    b.querySelector('.arrow').textContent = isActive ? (sortState.storeMissDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderWorkerMiss(d) {
+  const sorted = genericSort(d.workers, sortState.workerMissCol, sortState.workerMissDir);
+  document.getElementById('worker-miss-ranking').innerHTML = sorted.map((w, i) => {
+    const c = rateColor(w.rate);
+    return `
+      <div class="rank-item">
+        <div class="rank-num">${i + 1}</div>
+        <div class="rank-name">${w.name}（${w.total}件）</div>
+        <div class="rank-bar-wrap"><div class="rank-bar ${c}" style="width:${Math.min(w.rate * 5, 100)}%"></div></div>
+        <div class="rank-value ${c}">${w.rate.toFixed(2)}%</div>
+      </div>
+    `;
+  }).join('');
+  document.querySelectorAll('#worker-sort button').forEach(b => {
+    const isActive = b.dataset.sort === sortState.workerMissCol;
+    b.classList.toggle('active', isActive);
+    b.querySelector('.arrow').textContent = isActive ? (sortState.workerMissDir === 'desc' ? '▼' : '▲') : '';
+  });
+}
+
+function renderChart(d) {
+  const [key, dir] = sortState.chartSort.split('-');
+  const sorted = genericSort(d.stores, key, dir);
+  const maxTotal = Math.max(...d.stores.map(s => s.total)) || 1;
+  document.getElementById('production-chart').innerHTML = sorted.map(s => {
+    const pPct = (s.print / maxTotal) * 100;
+    const ePct = (s.emb / maxTotal) * 100;
+    const prePct = (s.pre / maxTotal) * 100;
+    return `
+      <div class="bar-item">
+        <div class="bar-label">
+          <span>${s.name}</span>
+          <span class="bar-value">${s.total}件</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-seg print" style="width:${pPct}%" title="プリント ${s.print}"></div>
+          <div class="bar-seg emb"   style="width:${ePct}%" title="刺繍 ${s.emb}"></div>
+          <div class="bar-seg pre"   style="width:${prePct}%" title="前処理 ${s.pre}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderProductionTable(d) {
+  const columns = [
+    { key: 'name', label: '店舗' },
+    { key: 'print', label: 'プリント計' },
+    { key: 'emb', label: '刺繍計' },
+    { key: 'pre', label: '前処理' },
+    { key: 'total', label: '合計' },
+    { key: 'ship', label: '送料' }
+  ];
+  let rows = sortState.productionCol
+    ? genericSort(d.stores, sortState.productionCol, sortState.productionDir)
+    : d.stores;
+  const thead = `<thead><tr>${columns.map(c => {
+    const cls = sortState.productionCol === c.key ? `sort-${sortState.productionDir}` : '';
+    return `<th class="${cls}" data-col="${c.key}">${c.label}</th>`;
+  }).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(s => `
+    <tr>
+      <td>${s.name}</td>
+      <td>${s.print}</td>
+      <td>${s.emb}</td>
+      <td>${s.pre}</td>
+      <td><strong>${s.total}</strong></td>
+      <td>¥${s.ship.toLocaleString()}</td>
+    </tr>
+  `).join('')}
+  <tr class="total-row">
+    <td>★合計</td>
+    <td>${d.stores.reduce((s, x) => s + x.print, 0)}</td>
+    <td>${d.stores.reduce((s, x) => s + x.emb, 0)}</td>
+    <td>${d.stores.reduce((s, x) => s + x.pre, 0)}</td>
+    <td>${d.stores.reduce((s, x) => s + x.total, 0)}</td>
+    <td>¥${d.stores.reduce((s, x) => s + x.ship, 0).toLocaleString()}</td>
+  </tr></tbody>`;
+  document.getElementById('production-table').innerHTML = thead + tbody;
+
+  // ヘッダクリックハンドラ
+  document.querySelectorAll('#production-table th').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.col;
+      sortState.productionDir = toggleDir(sortState.productionCol, col, sortState.productionDir);
+      sortState.productionCol = col;
+      renderProductionTable(d);
+    };
+  });
+}
+
+function renderPrintTable(d) {
+  const columns = [
+    { key: 'name', label: '店舗', sortKey: 'name' },
+    { key: 'white', label: '白', sortKey: '_white' },
+    { key: 'dark', label: '濃色', sortKey: '_dark' },
+    { key: 'tote', label: 'TOTE', sortKey: '_tote' },
+    { key: 'bottle', label: 'BOTTLE', sortKey: '_bottle' },
+    { key: 'total', label: '合計', sortKey: '_total' }
+  ];
+  let rows = sortState.printCol
+    ? genericSort(d.print, sortState.printCol, sortState.printDir)
+    : d.print;
+  const thead = `<thead><tr>${columns.map(c => {
+    const cls = sortState.printCol === c.sortKey ? `sort-${sortState.printDir}` : '';
+    return `<th class="${cls}" data-col="${c.sortKey}">${c.label}</th>`;
+  }).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td>${r.white}</td>
+      <td>${r.dark}</td>
+      <td>${r.tote}</td>
+      <td>${r.bottle}</td>
+      <td>${r.total}</td>
+    </tr>
+  `).join('')}
+  <tr class="total-row">
+    <td>${d.printTotal.name}</td>
+    <td>${d.printTotal.white}</td>
+    <td>${d.printTotal.dark}</td>
+    <td>${d.printTotal.tote}</td>
+    <td>${d.printTotal.bottle}</td>
+    <td>${d.printTotal.total}</td>
+  </tr></tbody>`;
+  document.getElementById('detail-print-table').innerHTML = thead + tbody;
+  document.querySelectorAll('#detail-print-table th').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.col;
+      sortState.printDir = toggleDir(sortState.printCol, col, sortState.printDir);
+      sortState.printCol = col;
+      renderPrintTable(d);
+    };
+  });
+}
+
+function renderEmbTable(d) {
+  const columns = [
+    { key: 'name', label: '店舗' },
+    { key: 'p1000', label: '1000' },
+    { key: 'p2000', label: '2000' },
+    { key: 'p3000', label: '3000' },
+    { key: 'p4000', label: '4000' },
+    { key: 'p4500', label: '4500' },
+    { key: 'total', label: '合計' }
+  ];
+  let rows = sortState.embCol
+    ? genericSort(d.emb, sortState.embCol, sortState.embDir)
+    : d.emb;
+  const thead = `<thead><tr>${columns.map(c => {
+    const cls = sortState.embCol === c.key ? `sort-${sortState.embDir}` : '';
+    return `<th class="${cls}" data-col="${c.key}">${c.label}</th>`;
+  }).join('')}</tr></thead>`;
+  const tbody = `<tbody>${rows.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td>${r.p1000}</td>
+      <td>${r.p2000}</td>
+      <td>${r.p3000}</td>
+      <td>${r.p4000}</td>
+      <td>${r.p4500}</td>
+      <td>${r.total}</td>
+    </tr>
+  `).join('')}
+  <tr class="total-row">
+    <td>${d.embTotal.name}</td>
+    <td>${d.embTotal.p1000}</td>
+    <td>${d.embTotal.p2000}</td>
+    <td>${d.embTotal.p3000}</td>
+    <td>${d.embTotal.p4000}</td>
+    <td>${d.embTotal.p4500}</td>
+    <td>${d.embTotal.total}</td>
+  </tr></tbody>`;
+  document.getElementById('detail-emb-table').innerHTML = thead + tbody;
+  document.querySelectorAll('#detail-emb-table th').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.col;
+      sortState.embDir = toggleDir(sortState.embCol, col, sortState.embDir);
+      sortState.embCol = col;
+      renderEmbTable(d);
+    };
+  });
+}
+
+function renderShipping(d) {
+  document.getElementById('ship-meta').textContent =
+    `${d.shipping.length}件 / 合計 ¥${d.shipping.reduce((s, x) => s + x.fee, 0).toLocaleString()}`;
+  let rows = sortState.shipCol
+    ? genericSort(d.shipping, sortState.shipCol, sortState.shipDir)
+    : d.shipping;
+  document.getElementById('ship-tbody').innerHTML = rows.map(s => `
+    <tr>
+      <td class="ship-store">${s.store}</td>
+      <td>${s.tab}</td>
+      <td>${s.no}</td>
+      <td class="ship-fee ${s.fee === 0 ? 'zero' : ''}">¥${s.fee.toLocaleString()}</td>
+    </tr>
+  `).join('');
+  // ヘッダーのクラス更新
+  document.querySelectorAll('#ship-thead th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === sortState.shipCol) {
+      th.classList.add(`sort-${sortState.shipDir}`);
+    }
+  });
+}
+
+// ==========================================
+// メインレンダリング
+// ==========================================
+function render() {
+  const d = data[currentPeriod];
+  document.getElementById('last-update').textContent = d.updatedAt;
+  renderKPI(d);
+  renderStoreMiss(d);
+  renderWorkerMiss(d);
+  renderChart(d);
+  renderProductionTable(d);
+  renderPrintTable(d);
+  renderEmbTable(d);
+  renderShipping(d);
+}
+
+// ==========================================
+// ソートボタンハンドラ
+// ==========================================
+document.querySelectorAll('#store-sort button').forEach(b => {
+  b.onclick = () => {
+    const col = b.dataset.sort;
+    sortState.storeMissDir = toggleDir(sortState.storeMissCol, col, sortState.storeMissDir);
+    sortState.storeMissCol = col;
+    renderStoreMiss(data[currentPeriod]);
+  };
+});
+document.querySelectorAll('#worker-sort button').forEach(b => {
+  b.onclick = () => {
+    const col = b.dataset.sort;
+    sortState.workerMissDir = toggleDir(sortState.workerMissCol, col, sortState.workerMissDir);
+    sortState.workerMissCol = col;
+    renderWorkerMiss(data[currentPeriod]);
+  };
+});
+document.getElementById('chart-sort').onchange = (e) => {
+  sortState.chartSort = e.target.value;
+  renderChart(data[currentPeriod]);
+};
+document.querySelectorAll('#ship-thead th').forEach(th => {
+  th.onclick = () => {
+    const col = th.dataset.col;
+    sortState.shipDir = toggleDir(sortState.shipCol, col, sortState.shipDir);
+    sortState.shipCol = col;
+    renderShipping(data[currentPeriod]);
+  };
+});
+
+render();
+</script>
+
+</body>
+</html>
