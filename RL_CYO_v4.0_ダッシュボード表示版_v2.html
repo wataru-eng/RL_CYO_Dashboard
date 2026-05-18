@@ -189,6 +189,87 @@
     font-size: 12px; letter-spacing: 0.5px;
   }
   footer { text-align: center; padding: 32px; color: #64748b; font-size: 11px; }
+
+  /* ============================ */
+  /* 請求書プレビュー */
+  /* ============================ */
+  .invoice-card .card-head {
+    background: linear-gradient(90deg, #1e293b 0%, transparent 100%);
+    margin-left: -20px; margin-right: -20px; margin-top: -20px;
+    padding: 16px 20px; border-radius: 12px 12px 0 0;
+  }
+  .invoice-subject {
+    padding: 12px 16px; background: #0f172a; border-radius: 8px;
+    margin-bottom: 12px; font-size: 13px; color: #cbd5e1;
+  }
+  .invoice-subject strong { color: white; }
+  .invoice-amount-box {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    padding: 16px 24px; border-radius: 10px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .invoice-amount-box .label { font-size: 13px; opacity: 0.85; color: white; }
+  .invoice-amount-box .amount { font-size: 28px; font-weight: 700; color: white; }
+
+  table.invoice-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.invoice-table th {
+    background: #0f172a; padding: 10px 12px; color: #94a3b8;
+    font-size: 11px; font-weight: 600;
+    border-bottom: 2px solid #334155;
+  }
+  table.invoice-table th.right, table.invoice-table td.right { text-align: right; }
+  table.invoice-table td {
+    padding: 10px 12px; border-bottom: 1px solid #1e293b; color: #e2e8f0;
+  }
+  table.invoice-table tr.zero td { color: #475569; }
+  table.invoice-table td.price { font-weight: 600; }
+  table.invoice-table tr.ship-row td { background: #0f172a; }
+  table.invoice-table tr.ship-row input {
+    background: #1e293b; border: 1px solid #475569; border-radius: 4px;
+    color: white; padding: 4px 8px; width: 90px; text-align: right;
+    font-size: 13px; font-family: inherit;
+  }
+  table.invoice-table tr.ship-row input:focus { outline: none; border-color: #60a5fa; }
+
+  .invoice-summary {
+    margin-top: 16px; padding: 14px 18px; background: #0f172a;
+    border-radius: 8px;
+  }
+  .invoice-summary-row {
+    display: flex; justify-content: space-between; padding: 4px 0;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .invoice-summary-row.grand {
+    border-top: 2px solid #475569; margin-top: 8px; padding-top: 12px;
+    font-size: 16px; font-weight: 700; color: #fbbf24;
+  }
+  .invoice-tax-box {
+    margin-top: 12px; padding: 10px 14px; background: #1e293b;
+    border-radius: 6px; font-size: 11px; color: #94a3b8;
+  }
+  .invoice-tax-box .header {
+    color: #cbd5e1; font-weight: 600; margin-bottom: 4px;
+  }
+  .invoice-tax-grid {
+    display: grid; grid-template-columns: 60px 1fr 1fr 1fr;
+    gap: 8px; font-family: monospace;
+  }
+  .invoice-tax-grid > div:not(:first-child) { text-align: right; }
+
+  .total-card {
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    border: none;
+  }
+  .total-card .total-amount {
+    font-size: 32px; font-weight: 700; color: white; line-height: 1.1;
+  }
+  .total-card .total-label {
+    font-size: 12px; color: #d1fae5; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .total-card .total-sub {
+    font-size: 12px; color: #6ee7b7; margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -201,9 +282,6 @@
   <div>
     <h1>📊 RL_CYO ダッシュボード</h1>
     <div class="meta">統合管理ビュー — 集計の可視化</div>
-  </div>
-  <div class="meta">
-    最終更新: <strong id="last-update">2026/05/15 18:55</strong>
   </div>
 </header>
 
@@ -289,6 +367,18 @@
       </div>
       <table class="data-table" id="production-table"></table>
     </div>
+  </section>
+
+  <!-- 請求書プレビュー -->
+  <section class="card invoice-card" style="margin-bottom:20px">
+    <div class="card-head">
+      <div class="card-title"><span class="icon">💰</span> 請求書プレビュー</div>
+      <div style="display:flex; align-items:center; gap:8px">
+        <span class="card-meta">店舗:</span>
+        <select class="chart-sort" id="invoice-store"></select>
+      </div>
+    </div>
+    <div id="invoice-content"></div>
   </section>
 
   <section class="card">
@@ -737,6 +827,201 @@ function renderEmbTable(d) {
   });
 }
 
+// ==========================================
+// 請求書計算
+// ==========================================
+const INVOICE_PRICES = {
+  light: 1730,    // 淡色プリント費（両面、白引き無し）= 白 + TOTE
+  dark: 2110,     // 濃色プリント費（両面、白引き有り）
+  pre: 560,       // 事前前処理作業費
+  bottle: 1060,   // ウォーターボトルプリント費
+  e1000: 550,
+  e2000: 1100,
+  e3000: 1650,
+  e4000: 2200,
+  e4500: 2480
+};
+
+// 店舗ごとの送料カスタム値（編集された値を保持）
+const shipOverrides = { caravan: {}, permanent: {} };
+
+function getStoreInvoice(d, storeIndex) {
+  const store = d.stores[storeIndex];
+  const printRow = d.print[storeIndex];
+  const embRow = d.emb[storeIndex];
+
+  // 「白 + TOTE」を淡色プリント費に合算（数値の内部値を使う）
+  const lightQty = (printRow?._white || 0) + (printRow?._tote || 0);
+  const darkQty = printRow?._dark || 0;
+  const bottleQty = printRow?._bottle || 0;
+  const preQty = store?.pre || 0;
+
+  // 送料：オーバーライド値があればそれを使う
+  const shipKey = `${currentPeriod}_${storeIndex}`;
+  const defaultShip = store?.ship || 0;
+  const shipFee = shipOverrides[currentPeriod][storeIndex] !== undefined
+    ? shipOverrides[currentPeriod][storeIndex] : defaultShip;
+
+  const items = [
+    { name: '淡色プリント費（両面、白引き無し）', price: INVOICE_PRICES.light, qty: lightQty },
+    { name: '濃色プリント費（両面、白引き有り）', price: INVOICE_PRICES.dark, qty: darkQty },
+    { name: '事前前処理作業費', price: INVOICE_PRICES.pre, qty: preQty },
+    { name: 'ウォーターボトルプリント費', price: INVOICE_PRICES.bottle, qty: bottleQty },
+    { name: '刺繍 1,000円', price: INVOICE_PRICES.e1000, qty: embRow?.p1000 || 0 },
+    { name: '刺繍 2,000円', price: INVOICE_PRICES.e2000, qty: embRow?.p2000 || 0 },
+    { name: '刺繍 3,000円', price: INVOICE_PRICES.e3000, qty: embRow?.p3000 || 0 },
+    { name: '刺繍 4,000円', price: INVOICE_PRICES.e4000, qty: embRow?.p4000 || 0 },
+    { name: '刺繍 4,500円', price: INVOICE_PRICES.e4500, qty: embRow?.p4500 || 0 }
+  ];
+  items.forEach(it => it.sub = it.price * it.qty);
+
+  // 送料は別扱い（編集可能）
+  const shipItem = { name: '送料', price: shipFee, qty: 1, sub: shipFee, editable: true };
+
+  const subtotal = items.reduce((s, i) => s + i.sub, 0) + shipItem.sub;
+  const tax = Math.round(subtotal * 0.10);
+  const total = subtotal + tax;
+
+  return { store, items, shipItem, subtotal, tax, total };
+}
+
+function renderInvoice() {
+  const d = data[currentPeriod];
+  const select = document.getElementById('invoice-store');
+
+  // プルダウン初期化（期間切替時のみ再構築）
+  const expectedOpts = d.stores.length + 1; // +1 = 全店舗合計
+  if (select.options.length !== expectedOpts) {
+    select.innerHTML = `<option value="all">📊 全店舗合計</option>` +
+      d.stores.map((s, i) => `<option value="${i}">${s.name}</option>`).join('');
+  }
+
+  const value = select.value || 'all';
+  let html = '';
+
+  if (value === 'all') {
+    // 全店舗合計
+    let totalItems = INVOICE_PRICES;
+    let aggregated = [
+      { name: '淡色プリント費（両面、白引き無し）', price: INVOICE_PRICES.light, qty: 0 },
+      { name: '濃色プリント費（両面、白引き有り）', price: INVOICE_PRICES.dark, qty: 0 },
+      { name: '事前前処理作業費', price: INVOICE_PRICES.pre, qty: 0 },
+      { name: 'ウォーターボトルプリント費', price: INVOICE_PRICES.bottle, qty: 0 },
+      { name: '刺繍 1,000円', price: INVOICE_PRICES.e1000, qty: 0 },
+      { name: '刺繍 2,000円', price: INVOICE_PRICES.e2000, qty: 0 },
+      { name: '刺繍 3,000円', price: INVOICE_PRICES.e3000, qty: 0 },
+      { name: '刺繍 4,000円', price: INVOICE_PRICES.e4000, qty: 0 },
+      { name: '刺繍 4,500円', price: INVOICE_PRICES.e4500, qty: 0 }
+    ];
+    let totalShip = 0;
+    d.stores.forEach((s, i) => {
+      const inv = getStoreInvoice(d, i);
+      inv.items.forEach((it, idx) => { aggregated[idx].qty += it.qty; });
+      totalShip += inv.shipItem.sub;
+    });
+    aggregated.forEach(it => it.sub = it.price * it.qty);
+    const shipItem = { name: '送料', price: totalShip, qty: 1, sub: totalShip, editable: false };
+    const subtotal = aggregated.reduce((s, i) => s + i.sub, 0) + shipItem.sub;
+    const tax = Math.round(subtotal * 0.10);
+    const total = subtotal + tax;
+
+    html = buildInvoiceHTML({
+      subject: `${d.name} 全店舗合計`,
+      items: aggregated,
+      shipItem,
+      subtotal, tax, total,
+      storeIndex: 'all'
+    });
+  } else {
+    const idx = parseInt(value);
+    const inv = getStoreInvoice(d, idx);
+    html = buildInvoiceHTML({
+      subject: `2026 SS SIS CYO Factory Print ${inv.store.name}`,
+      items: inv.items,
+      shipItem: inv.shipItem,
+      subtotal: inv.subtotal,
+      tax: inv.tax,
+      total: inv.total,
+      storeIndex: idx
+    });
+  }
+
+  document.getElementById('invoice-content').innerHTML = html;
+
+  // 送料入力ハンドラ
+  const shipInput = document.getElementById('ship-fee-input');
+  if (shipInput) {
+    shipInput.oninput = (e) => {
+      const v = parseInt(e.target.value) || 0;
+      shipOverrides[currentPeriod][parseInt(value)] = v;
+      renderInvoice();
+      // フォーカスを保持
+      setTimeout(() => {
+        const newInput = document.getElementById('ship-fee-input');
+        if (newInput) { newInput.focus(); newInput.setSelectionRange(newInput.value.length, newInput.value.length); }
+      }, 0);
+    };
+  }
+}
+
+function buildInvoiceHTML({ subject, items, shipItem, subtotal, tax, total, storeIndex }) {
+  const itemsHTML = items.map(it => `
+    <tr class="${it.qty === 0 ? 'zero' : ''}">
+      <td>${it.name}</td>
+      <td class="right">¥${it.price.toLocaleString()}</td>
+      <td class="right">${it.qty}</td>
+      <td class="right price">¥${it.sub.toLocaleString()}</td>
+    </tr>
+  `).join('');
+
+  const shipHTML = storeIndex !== 'all' ? `
+    <tr class="ship-row">
+      <td>${shipItem.name}</td>
+      <td class="right"><input type="number" id="ship-fee-input" value="${shipItem.price}" min="0" step="100" /></td>
+      <td class="right">1</td>
+      <td class="right price">¥${shipItem.sub.toLocaleString()}</td>
+    </tr>
+  ` : `
+    <tr class="ship-row">
+      <td>${shipItem.name}（全店舗合計）</td>
+      <td class="right">-</td>
+      <td class="right">-</td>
+      <td class="right price">¥${shipItem.sub.toLocaleString()}</td>
+    </tr>
+  `;
+
+  return `
+    <div class="invoice-subject">件名: <strong>${subject}</strong></div>
+    <div class="invoice-amount-box">
+      <div class="label">ご請求金額（税込）</div>
+      <div class="amount">¥${total.toLocaleString()}</div>
+    </div>
+    <table class="invoice-table">
+      <thead>
+        <tr>
+          <th>品目</th>
+          <th class="right">単価</th>
+          <th class="right">数量</th>
+          <th class="right">価格</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHTML}${shipHTML}</tbody>
+    </table>
+    <div class="invoice-summary">
+      <div class="invoice-summary-row"><span>小計</span><span>¥${subtotal.toLocaleString()}</span></div>
+      <div class="invoice-summary-row"><span>消費税額合計（10%）</span><span>¥${tax.toLocaleString()}</span></div>
+      <div class="invoice-summary-row grand"><span>合計</span><span>¥${total.toLocaleString()}</span></div>
+    </div>
+    <div class="invoice-tax-box">
+      <div class="header">税率別内訳</div>
+      <div class="invoice-tax-grid">
+        <div></div><div>税抜金額</div><div>消費税額</div><div>税込金額</div>
+        <div>10%</div><div>¥${subtotal.toLocaleString()}</div><div>¥${tax.toLocaleString()}</div><div>¥${total.toLocaleString()}</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderShipping(d) {
   document.getElementById('ship-meta').textContent =
     `${d.shipping.length}件 / 合計 ¥${d.shipping.reduce((s, x) => s + x.fee, 0).toLocaleString()}`;
@@ -765,7 +1050,6 @@ function renderShipping(d) {
 // ==========================================
 function render() {
   const d = data[currentPeriod];
-  document.getElementById('last-update').textContent = d.updatedAt;
   renderKPI(d);
   renderStoreMiss(d);
   renderWorkerMiss(d);
@@ -773,8 +1057,20 @@ function render() {
   renderProductionTable(d);
   renderPrintTable(d);
   renderEmbTable(d);
+  renderInvoice();
   renderShipping(d);
 }
+
+// 期間切替時に invoice の選択をリセット
+const _origSwitchPeriod = switchPeriod;
+switchPeriod = function(period) {
+  _origSwitchPeriod(period);
+  const sel = document.getElementById('invoice-store');
+  if (sel) sel.value = 'all';
+};
+
+// 請求書プルダウンのハンドラ
+document.getElementById('invoice-store').onchange = () => renderInvoice();
 
 // ==========================================
 // ソートボタンハンドラ
