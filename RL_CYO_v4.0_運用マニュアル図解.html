@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL_CYO ダッシュボード v4.0 運用マニュアル図解</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    margin: 0;
+    line-height: 1.7;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #4285f4 0%, #1e40af 100%);
+    color: white;
+    padding: 50px 20px;
+    text-align: center;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 28px; font-weight: 700; }
+  header.hero .subtitle { font-size: 14px; opacity: 0.9; letter-spacing: 0.5px; }
+  header.hero .version { display: inline-block; margin-top: 12px; padding: 4px 12px;
+    background: rgba(255,255,255,0.2); border-radius: 12px; font-size: 12px; }
+
+  nav.toc {
+    background: white;
+    border-bottom: 1px solid #e0e6ed;
+    padding: 14px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+  nav.toc ul { list-style: none; margin: 0; padding: 0;
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  nav.toc a {
+    display: inline-block; padding: 6px 14px; border-radius: 16px;
+    background: #f0f4f8; text-decoration: none; color: #475569;
+    font-size: 13px; transition: all 0.2s;
+  }
+  nav.toc a:hover { background: #4285f4; color: white; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+
+  section.scene {
+    background: white; border-radius: 14px; padding: 36px;
+    margin-bottom: 36px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .scene-head { display: flex; align-items: flex-start; gap: 18px;
+    margin-bottom: 28px; padding-bottom: 18px; border-bottom: 2px solid #f0f4f8; }
+  .scene-icon { font-size: 44px; line-height: 1; }
+  .scene-title { margin: 0; font-size: 22px; font-weight: 700; color: #1e293b; }
+  .scene-lead { margin: 6px 0 0; color: #64748b; font-size: 14px; }
+
+  h3.section-h { font-size: 16px; color: #1e293b; margin: 28px 0 14px;
+    padding-left: 12px; border-left: 4px solid #4285f4; }
+
+  /* ステップ - 縦並び */
+  .steps-v { display: flex; flex-direction: column; gap: 12px; }
+  .step-card {
+    display: flex; gap: 16px; padding: 16px;
+    background: #f8fafc; border-radius: 10px; border-left: 4px solid #4285f4;
+  }
+  .step-card.manual { border-left-color: #34a853; }
+  .step-card.auto { border-left-color: #fbbc04; }
+  .step-card.system { border-left-color: #4285f4; }
+  .step-num {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+    background: #4285f4; color: white; font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-card.manual .step-num { background: #34a853; }
+  .step-card.auto .step-num { background: #fbbc04; }
+  .step-body { flex: 1; }
+  .step-body .title { font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+  .step-body .desc { font-size: 14px; color: #475569; }
+
+  /* ステップ - 横並び */
+  .steps-h { display: flex; gap: 12px; flex-wrap: wrap; }
+  .steps-h .step-card { flex: 1; min-width: 200px; flex-direction: column;
+    text-align: center; align-items: center; }
+
+  /* メニュー操作の表現 */
+  .menu-path {
+    display: inline-block; padding: 6px 12px; background: #1e293b; color: white;
+    border-radius: 6px; font-family: "SF Mono", Monaco, monospace; font-size: 13px;
+  }
+  .menu-path span { color: #fbbc04; margin: 0 6px; }
+  .menu-path .item { color: #93c5fd; }
+
+  /* キーワード */
+  .kw { display: inline-block; padding: 2px 8px; background: #eff6ff;
+    color: #1e40af; border-radius: 4px; font-size: 90%; font-weight: 500; }
+  .kw-green { background: #ecfdf5; color: #166534; }
+  .kw-orange { background: #fef3c7; color: #92400e; }
+  .kw-red { background: #fef2f2; color: #991b1b; }
+
+  /* 注意ボックス */
+  .note {
+    padding: 14px 18px; border-radius: 8px;
+    margin: 18px 0; font-size: 14px;
+  }
+  .note.info    { background: #eff6ff; border-left: 4px solid #4285f4; }
+  .note.warn    { background: #fef3c7; border-left: 4px solid #fbbc04; }
+  .note.alert   { background: #fef2f2; border-left: 4px solid #ea4335; }
+  .note.success { background: #ecfdf5; border-left: 4px solid #34a853; }
+  .note strong { display: inline-block; margin-right: 6px; }
+
+  /* テーブル */
+  table.compare {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 14px;
+  }
+  table.compare th, table.compare td {
+    padding: 10px 14px; border: 1px solid #e2e8f0; text-align: left;
+  }
+  table.compare th { background: #f8fafc; font-weight: 700; color: #1e293b; }
+  table.compare tr:nth-child(even) td { background: #fafbfc; }
+
+  /* システム全体図のSVG用 */
+  .system-diagram {
+    background: #f8fafc; padding: 28px; border-radius: 12px;
+    margin: 20px 0; overflow-x: auto;
+  }
+
+  /* 矢印（横） */
+  .arrow-right {
+    display: inline-flex; align-items: center; padding: 0 8px;
+    color: #94a3b8; font-size: 22px;
+  }
+
+  /* 役割タグ */
+  .role-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.3px;
+  }
+  .role-system { background: #dbeafe; color: #1e40af; }
+  .role-manual { background: #d1fae5; color: #065f46; }
+  .role-auto   { background: #fef3c7; color: #92400e; }
+  .role-trouble{ background: #fee2e2; color: #991b1b; }
+
+  /* レイアウト図（カード式の箱） */
+  .box-diagram {
+    display: grid; gap: 12px; margin: 20px 0;
+  }
+  .box {
+    padding: 14px 18px; border-radius: 8px; background: white;
+    border: 2px solid #e2e8f0;
+  }
+  .box.blue   { border-color: #4285f4; background: #eff6ff; }
+  .box.green  { border-color: #34a853; background: #ecfdf5; }
+  .box.orange { border-color: #fbbc04; background: #fef3c7; }
+  .box.gray   { border-color: #94a3b8; background: #f1f5f9; }
+  .box-title  { font-weight: 700; color: #1e293b; font-size: 14px; }
+  .box-body   { font-size: 13px; color: #475569; margin-top: 4px; }
+
+  /* OCRシーン用シート列イメージ */
+  .sheet-cols {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 6px; margin: 16px 0;
+  }
+  .sheet-col {
+    padding: 8px 10px; border-radius: 6px; font-size: 12px;
+    text-align: center; font-weight: 500;
+  }
+  .sheet-col.ocr   { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+  .sheet-col.human { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+  .sheet-col.meta  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+  /* 中央寄せ大文字テキスト（フロー） */
+  .flow-step-big {
+    text-align: center; padding: 16px; margin: 8px 0;
+    background: #f8fafc; border-radius: 8px; font-weight: 600;
+  }
+  .flow-down { text-align: center; color: #94a3b8; font-size: 28px; }
+
+  /* 凡例 */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    padding: 12px 16px; background: #fafbfc; border-radius: 8px;
+    margin: 16px 0; font-size: 13px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-color {
+    width: 14px; height: 14px; border-radius: 3px;
+  }
+
+  footer { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>RL_CYO ダッシュボード 運用マニュアル図解</h1>
+  <div class="subtitle">使用者目線でみる システムの動き と 操作手順</div>
+  <div class="version">v4.0 / 2026年5月</div>
+</header>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#scene1">🏗️ ① システム全体像</a></li>
+    <li><a href="#scene2">🚀 ② 新シーズン開始</a></li>
+    <li><a href="#scene3">📅 ③ 新年度開始</a></li>
+    <li><a href="#scene4">🏪 ④ 店舗追加</a></li>
+    <li><a href="#scene5">🔄 ⑤ 日常運用</a></li>
+    <li><a href="#scene6">📷 ⑥ OCR連携</a></li>
+    <li><a href="#scene7">🩺 ⑦ トラブル時</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- ============================ -->
+<!-- シーン1：システム全体像 -->
+<!-- ============================ -->
+<section class="scene" id="scene1">
+  <div class="scene-head">
+    <div class="scene-icon">🏗️</div>
+    <div>
+      <h2 class="scene-title">① システム全体像</h2>
+      <p class="scene-lead">誰が・何を・どこに置いているか — 仕組みのざっくり地図</p>
+    </div>
+  </div>
+
+  <h3 class="section-h">登場する3つの "場所"</h3>
+  <div class="box-diagram">
+    <div class="box blue">
+      <div class="box-title">📊 管理SS（RL_CYO 統合管理SS）</div>
+      <div class="box-body">
+        全店舗のデータを集約してダッシュボード化する司令塔。<br>
+        運営者（渉さん）が見るのはここ。GAS スクリプトもここに紐付いている。
+      </div>
+    </div>
+    <div class="box green">
+      <div class="box-title">🏪 店舗SS（店舗ごと・月ごとに別ファイル）</div>
+      <div class="box-body">
+        実際に検品データを記録する個別スプレッドシート。<br>
+        Caravan：1店舗 = 1ファイル　／　常設：1店舗 × 1ヶ月 = 1ファイル
+      </div>
+    </div>
+    <div class="box orange">
+      <div class="box-title">📷 OCR起動WebApp と 画像フォルダ</div>
+      <div class="box-body">
+        オーダーレシートの写真を読み込んで、店舗SSに自動で行データを書き込む仕組み。<br>
+        画像をアップする読み込みフォルダ と、起動するための Web App URL がある。
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-h">データの流れ</h3>
+  <div class="system-diagram">
+    <div class="flow-step-big">📷 オーダーレシートを撮影 → 画像フォルダにアップ</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">🔍 OCR起動WebApp で OCR を実行（店舗・タブを選択）</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">📄 店舗SS の検品シートに行データが自動入力<br><small style="font-weight:400;color:#64748b">count / name / code / category / color / size / 刺繍 など</small></div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">👷 作業者が実際の作業（プリント・刺繍など）を行い、判定〇△✕を入力</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">⏰ 毎日 15:00 / 21:00 にGASが自動集計（または手動で「今すぐ更新」）</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">📊 管理SS のダッシュボードが更新される<br><small style="font-weight:400;color:#64748b">ミス率 / 製作数合計 / 作業者別ミス率 / 送料明細 など</small></div>
+  </div>
+
+  <div class="note info">
+    <strong>📌 ポイント</strong>
+    OCR と ダッシュボードは別系統。OCR は「データの入口」、ダッシュボードは「データの集計と表示」の役割。
+    OCRが何を読み取ったかではなく、その後の<strong>作業品質（プリント・刺繍の出来栄え）に対する判定〇△✕</strong>がダッシュボードのミス率になります。
+  </div>
+
+  <h3 class="section-h">凡例（このマニュアル共通）</h3>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#4285f4"></div>システム処理（自動）</div>
+    <div class="legend-item"><div class="legend-color" style="background:#34a853"></div>人が手動でやる操作</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fbbc04"></div>OCR / トリガー（半自動）</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ea4335"></div>注意・トラブル</div>
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン2：新シーズンを始める（Caravan） -->
+<!-- ============================ -->
+<section class="scene" id="scene2">
+  <div class="scene-head">
+    <div class="scene-icon">🚀</div>
+    <div>
+      <h2 class="scene-title">② 新シーズンを始める（Caravan）</h2>
+      <p class="scene-lead">例：2026SS / 2026FW など、新しいキャラバンシーズンの立ち上げ手順</p>
+    </div>
+  </div>
+
+  <div class="note info">
+    <strong>🎯 ゴール</strong>
+    管理SS に新しい「【Caravan】2026SS」タブを生成して、店舗データを集計できる状態にする。
+  </div>
+
+  <h3 class="section-h">手順</h3>
+  <div class="steps-v">
+    <div class="step-card manual">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">管理SS のメニューからテンプレ生成</div>
+        <div class="desc">
+          <span class="menu-path">ダッシュボード <span>→</span> <span class="item">テンプレ生成</span> <span>→</span> <span class="item">Caravan タブ</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">シーズン名を入力</div>
+        <div class="desc">
+          プロンプトに <span class="kw">2026SS</span> のように入力 →
+          「<span class="kw">【Caravan】2026SS</span>」というタブが自動生成される。
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">生成されたタブのレジストリに店舗情報を入力</div>
+        <div class="desc">
+          A〜F列に手動入力：
+          <table class="compare">
+            <tr><th>A列</th><th>B列</th><th>C列</th><th>D列</th><th>E列</th><th>F列</th></tr>
+            <tr><td>店舗名</td><td>店舗SS ID</td><td>実施期間開始</td><td>実施期間終了</td><td>締め月</td><td>備考</td></tr>
+            <tr><td>4/8-14 伊勢丹静岡</td><td>1_vpZGy9D5g…</td><td>2026/4/8</td><td>2026/4/14</td><td>4月</td><td></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">各店舗SS を用意</div>
+        <div class="desc">
+          シーズン用の検品シート（オーダー入力 + OCRが走る側のSS）を、店舗ごとに用意。<br>
+          ※ 既存テンプレからのコピーで運用。<span class="kw-orange kw">店舗SS の ID をレジストリのB列に貼る</span>のがポイント。
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">ダッシュボードを手動更新（初回確認）</div>
+        <div class="desc">
+          <span class="menu-path">ダッシュボード <span>→</span> <span class="item">今すぐ更新（特定の期間タブだけ）</span></span>
+          で 【Caravan】2026SS を選択 → 結果を確認。
+        </div>
+      </div>
+    </div>
+    <div class="step-card auto">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="title">あとは自動更新トリガーが回り続ける</div>
+        <div class="desc">
+          既存の毎日 15:00 / 21:00 のトリガーが、新しい期間タブも自動で拾います。<br>
+          ※ トリガー未設定なら <span class="menu-path">ダッシュボード <span>→</span> <span class="item">自動更新トリガー設定</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <strong>⚠️ 注意</strong>
+    レジストリのB列（店舗SS ID）が間違っていると、その行の集計が <span class="kw-red kw">エラー</span> 扱いになります。
+    SS ID は URL の <code>/d/...../edit</code> の <strong>....</strong> の部分。コピペミスに注意。
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン3：新年度を始める（常設） -->
+<!-- ============================ -->
+<section class="scene" id="scene3">
+  <div class="scene-head">
+    <div class="scene-icon">📅</div>
+    <div>
+      <h2 class="scene-title">③ 新年度を始める（常設）</h2>
+      <p class="scene-lead">例：2027年 など、新しい年の常設プロジェクト立ち上げ手順</p>
+    </div>
+  </div>
+
+  <div class="note info">
+    <strong>🎯 ゴール</strong>
+    常設店舗の 1月〜12月分の店舗SS を全部用意し、管理SS に「【常設】2027」タブを生成して集計できる状態にする。
+  </div>
+
+  <h3 class="section-h">手順</h3>
+  <div class="steps-v">
+    <div class="step-card auto">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">常設店舗SSを年間一括で生成</div>
+        <div class="desc">
+          <span class="menu-path">常設 <span>→</span> <span class="item">指定年のSSを一括生成</span></span><br>
+          → 12ヶ月 × 店舗数 の検品SS が一気に作られる。<br>
+          ※ 12月になると、年次トリガーで翌年分が自動生成される設定もあります。
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">管理SS で常設テンプレを生成</div>
+        <div class="desc">
+          <span class="menu-path">ダッシュボード <span>→</span> <span class="item">テンプレ生成</span> <span>→</span> <span class="item">常設 タブ</span></span><br>
+          プロンプトに <span class="kw">2027</span> と入力 → 「<span class="kw">【常設】2027</span>」タブが生成される。
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">レジストリに各月のSS IDを貼り付け</div>
+        <div class="desc">
+          A列に店舗名、B〜M列に1月〜12月の店舗SS ID。
+          <table class="compare">
+            <tr><th>A列</th><th>B列</th><th>C列</th><th>...</th><th>M列</th><th>N列</th></tr>
+            <tr><td>店舗名</td><td>1月 SS ID</td><td>2月 SS ID</td><td>...</td><td>12月 SS ID</td><td>備考</td></tr>
+            <tr><td>阪急梅田</td><td>1-XJC2c…</td><td>1SGoHD…</td><td>...</td><td>1BpQtQ…</td><td></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">手動更新で確認</div>
+        <div class="desc">
+          <span class="menu-path">ダッシュボード <span>→</span> <span class="item">今すぐ更新（特定の期間タブだけ）</span></span>
+          で 【常設】2027 を選択 → ダッシュボード反映を確認。
+        </div>
+      </div>
+    </div>
+    <div class="step-card auto">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">以降は自動更新でOK</div>
+        <div class="desc">
+          毎日 15:00 / 21:00 の自動更新が、新しい期間タブも対象に。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note success">
+    <strong>💡 ヒント</strong>
+    常設は「店舗 × 月」の組み合わせなので、レジストリ入力が一番の作業ボリューム。
+    SS ID のコピペは <span class="kw">途中で切れない</span> よう注意。
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン4：店舗を追加する -->
+<!-- ============================ -->
+<section class="scene" id="scene4">
+  <div class="scene-head">
+    <div class="scene-icon">🏪</div>
+    <div>
+      <h2 class="scene-title">④ 店舗を追加する（既存シーズン・年度に追加）</h2>
+      <p class="scene-lead">シーズン途中で新しい店舗が増えた場合の手順</p>
+    </div>
+  </div>
+
+  <h3 class="section-h">A. Caravan に店舗追加</h3>
+  <div class="steps-h">
+    <div class="step-card manual">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">店舗SSを用意</div>
+        <div class="desc">既存テンプレからコピーして新店舗用のSSを作成</div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">レジストリに行追加</div>
+        <div class="desc">該当シーズンタブの A〜F列 最下行に追加</div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">手動更新</div>
+        <div class="desc">「今すぐ更新（特定の期間タブだけ）」で確認</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-h">B. 常設に店舗追加</h3>
+  <div class="steps-h">
+    <div class="step-card manual">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">該当月の店舗SS を用意</div>
+        <div class="desc">月ごとに1ファイル必要</div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">レジストリに行追加</div>
+        <div class="desc">A列に店舗名、B〜M列に該当する月のSS ID を貼り付け（途中月から開始可）</div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">手動更新</div>
+        <div class="desc">「今すぐ更新（特定の期間タブだけ）」で確認</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note warn">
+    <strong>⚠️ 注意：店舗20件を超える場合</strong>
+    Caravan テンプレートのデフォルト枠は20件。20件を超えると、システムが <span class="kw">自動で行を追加</span> しますが、
+    途中で予期せぬ挙動が起きた場合は「テンプレ整合性チェック」で確認してください。
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン5：日常運用の流れ -->
+<!-- ============================ -->
+<section class="scene" id="scene5">
+  <div class="scene-head">
+    <div class="scene-icon">🔄</div>
+    <div>
+      <h2 class="scene-title">⑤ 日常運用の流れ</h2>
+      <p class="scene-lead">毎日 何が動いて、何を確認すれば良いか</p>
+    </div>
+  </div>
+
+  <h3 class="section-h">登場人物と役割</h3>
+  <div class="box-diagram">
+    <div class="box green">
+      <div class="box-title">👷 店舗作業者</div>
+      <div class="box-body">OCRで検品シートに入力 → 実作業 → 判定〇△✕を入力（日々）</div>
+    </div>
+    <div class="box orange">
+      <div class="box-title">⏰ 自動トリガー（GAS）</div>
+      <div class="box-body">毎日 15:00 と 21:00 に <span class="kw">refreshAllDashboards</span> が自動実行</div>
+    </div>
+    <div class="box blue">
+      <div class="box-title">👀 運営者（渉さん）</div>
+      <div class="box-body">管理SSのダッシュボードを確認 → 異常があれば店舗SSに飛んで詳細を見る</div>
+    </div>
+  </div>
+
+  <h3 class="section-h">1日のサイクル（典型例）</h3>
+  <div class="system-diagram">
+    <div class="flow-step-big">🌅 <strong>朝〜日中</strong>　店舗作業者が検品シートに OCR入力 → 作業 → 判定入力</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">⏰ <strong>15:00</strong>　1回目の自動更新（GASトリガー）<br><small style="font-weight:400;color:#64748b">→ 管理SSのダッシュボードが最新状態に</small></div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">🔍 <strong>夕方</strong>　運営者がダッシュボードをチェック</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">⏰ <strong>21:00</strong>　2回目の自動更新（夜分の入力分も反映）</div>
+    <div class="flow-down">↓</div>
+    <div class="flow-step-big">📊 <strong>翌朝</strong>　ダッシュボードを朝イチで確認、必要に応じて手動更新</div>
+  </div>
+
+  <h3 class="section-h">運営者が確認するポイント</h3>
+  <div class="steps-h">
+    <div class="step-card system">
+      <div class="step-num">📊</div>
+      <div class="step-body">
+        <div class="title">▼ 全体サマリ（常設のみ）</div>
+        <div class="desc">総製作数 / ミス率 / 対象店舗数</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">📊</div>
+      <div class="step-body">
+        <div class="title">▼ 店舗別ミス率</div>
+        <div class="desc">どの店舗のミスが多いか</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">📊</div>
+      <div class="step-body">
+        <div class="title">▼ 作業者別ミス率</div>
+        <div class="desc">作業者ごとのミス傾向</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">📊</div>
+      <div class="step-body">
+        <div class="title">ミス一覧 YYYY</div>
+        <div class="desc">ミスの詳細（商品コード・作業者・日時）一覧</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note info">
+    <strong>📌 急ぎで反映したい時</strong>
+    自動更新を待たずに、メニュー <span class="menu-path">ダッシュボード <span>→</span> <span class="item">今すぐ更新（全期間）</span></span> でいつでも手動更新可能。
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン6：OCR連携の仕組み -->
+<!-- ============================ -->
+<section class="scene" id="scene6">
+  <div class="scene-head">
+    <div class="scene-icon">📷</div>
+    <div>
+      <h2 class="scene-title">⑥ OCR連携の仕組み</h2>
+      <p class="scene-lead">オーダーレシートの写真から、検品シートへ自動入力するまでの流れ</p>
+    </div>
+  </div>
+
+  <div class="note success">
+    <strong>💡 Before / After</strong><br>
+    <strong>Before：</strong>作業者が検品シートの全列を手入力していた（時間がかかる・タイプミス頻発）<br>
+    <strong>After：</strong>レシートを撮ってOCR起動するだけで、商品情報が自動入力（判定だけ人間が入れる）
+  </div>
+
+  <h3 class="section-h">OCR の6ステップ</h3>
+  <div class="steps-v">
+    <div class="step-card manual">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">オーダーレシートを撮影</div>
+        <div class="desc">複数のレシートをまとめて撮るのが効率的（一括処理が基本）</div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">読み込みフォルダに画像をアップロード</div>
+        <div class="desc">
+          Google ドライブ内の専用フォルダにアップ。<br>
+          <span class="kw-orange kw">Caravan：1店舗 = 1フォルダ</span>　
+          <span class="kw-orange kw">常設：1ヶ月 = 1フォルダ</span>
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">OCR起動 WebApp を開く</div>
+        <div class="desc">
+          管理SS の設定タブにある OCR Web App URL を開く。<br>
+          ブラウザに UI が表示される。
+        </div>
+      </div>
+    </div>
+    <div class="step-card manual">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">店舗・タブを選択</div>
+        <div class="desc">プルダウンで「どの店舗のどのタブに反映するか」を選択</div>
+      </div>
+    </div>
+    <div class="step-card auto">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="title">実行 → OCRが画像を解析</div>
+        <div class="desc">画像1枚 = 検品シート1行 として処理</div>
+      </div>
+    </div>
+    <div class="step-card auto">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="title">検品シートに自動入力される</div>
+        <div class="desc">商品情報・OCR元画像名・更新日時が記録される</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-h">検品シートの列構成（OCRが書く列 vs 人が書く列）</h3>
+  <div class="sheet-cols">
+    <div class="sheet-col ocr">count</div>
+    <div class="sheet-col ocr">name</div>
+    <div class="sheet-col ocr">code</div>
+    <div class="sheet-col ocr">category①</div>
+    <div class="sheet-col ocr">category②</div>
+    <div class="sheet-col ocr">color</div>
+    <div class="sheet-col ocr">size</div>
+    <div class="sheet-col ocr">刺繍</div>
+    <div class="sheet-col human">remark</div>
+    <div class="sheet-col human">memo</div>
+    <div class="sheet-col human">作業者</div>
+    <div class="sheet-col human">判定〇△✕</div>
+    <div class="sheet-col human">配送業者</div>
+    <div class="sheet-col human">発送No</div>
+    <div class="sheet-col human">発送日</div>
+    <div class="sheet-col meta">OCR元画像</div>
+    <div class="sheet-col meta">再OCR</div>
+    <div class="sheet-col meta">更新日時</div>
+    <div class="sheet-col meta">再OCR回数</div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:#dbeafe"></div>OCRが自動入力</div>
+    <div class="legend-item"><div class="legend-color" style="background:#d1fae5"></div>作業者が手入力</div>
+    <div class="legend-item"><div class="legend-color" style="background:#fef3c7"></div>OCRシステムが自動記録（メタ情報）</div>
+  </div>
+
+  <div class="note warn">
+    <strong>⚠️ OCRエラー時</strong>
+    OCRが読み取れなかった項目があると、<span class="kw">remark列</span> に「●●エラー」と自動記載されます。
+    その場合は手動で訂正 or 再OCRボタン（検品シート内）で再実行できます。
+  </div>
+
+  <div class="note info">
+    <strong>🔗 OCR と ダッシュボードの関係</strong>
+    OCR は <strong>検品シートの入口を効率化するツール</strong>。
+    ダッシュボードのミス率 = OCR の精度ではなく、<strong>作業者が入力する判定〇△✕</strong>（プリント・刺繍の実作業の品質）に基づきます。
+    OCR が間違っても、それはダッシュボードのミス率には直接影響しません。
+  </div>
+</section>
+
+<!-- ============================ -->
+<!-- シーン7：トラブル時の対応 -->
+<!-- ============================ -->
+<section class="scene" id="scene7">
+  <div class="scene-head">
+    <div class="scene-icon">🩺</div>
+    <div>
+      <h2 class="scene-title">⑦ トラブル時の対応</h2>
+      <p class="scene-lead">「あれ、おかしいな」と思った時の診断フロー</p>
+    </div>
+  </div>
+
+  <h3 class="section-h">症状別 対応マップ</h3>
+
+  <div class="box-diagram">
+
+    <div class="box gray">
+      <div class="box-title">😵 メニューが表示されない</div>
+      <div class="box-body">
+        <strong>原因：</strong>SS のリロードが不足、または onOpen エラー<br>
+        <strong>対応：</strong>
+        ① SSタブを <span class="kw">完全に閉じてから開き直す</span><br>
+        ② それでも出ない場合は GASエディタで <span class="kw">実行ログ</span> を確認
+      </div>
+    </div>
+
+    <div class="box gray">
+      <div class="box-title">📭 ダッシュボードにデータが入らない</div>
+      <div class="box-body">
+        <strong>確認手順：</strong><br>
+        ① <span class="menu-path">ダッシュボード <span>→</span> <span class="item">期間タブ検出テスト</span></span><br>
+        　 → 対象タブが検出されているか<br>
+        ② <span class="menu-path">ダッシュボード <span>→</span> <span class="item">レジストリ&amp;ラベル検出テスト</span></span><br>
+        　 → レジストリ（B列など）が読めているか、ラベルが見つかっているか<br>
+        ③ <span class="menu-path">ダッシュボード <span>→</span> <span class="item">テンプレ整合性チェック</span></span><br>
+        　 → テンプレタブの ▼ ラベルが正しい位置にあるか
+      </div>
+    </div>
+
+    <div class="box gray">
+      <div class="box-title">🎨 ダッシュボードのレイアウトが崩れる</div>
+      <div class="box-body">
+        <strong>典型例：</strong>
+        ・余り行が残っている　
+        ・★合計の位置がずれている　
+        ・列がはみ出している<br>
+        <strong>対応：</strong>
+        手動で <span class="menu-path">ダッシュボード <span>→</span> <span class="item">今すぐ更新（特定の期間タブだけ）</span></span> を実行して再描画。<br>
+        ※ 該当タブを一度コピーしてバックアップしてから対処すると安心。
+      </div>
+    </div>
+
+    <div class="box gray">
+      <div class="box-title">📷 OCR が認識ミスをした</div>
+      <div class="box-body">
+        <strong>対応：</strong><br>
+        ① 検品シート内の <span class="kw-orange kw">再OCRボタン</span> から再実行<br>
+        ② 改善しなければ手動で修正（OCRが書いた列を直接編集してOK）
+      </div>
+    </div>
+
+    <div class="box gray">
+      <div class="box-title">⏱ 自動更新が走っていない</div>
+      <div class="box-body">
+        <strong>確認：</strong>GASエディタの「トリガー」アイコンから登録状況を確認<br>
+        <strong>対応：</strong>
+        <span class="menu-path">ダッシュボード <span>→</span> <span class="item">自動更新トリガー設定</span></span> で再登録
+      </div>
+    </div>
+
+    <div class="box gray">
+      <div class="box-title">⚠️ ストア集計のエラーが出る</div>
+      <div class="box-body">
+        <strong>典型例：</strong>
+        「店舗SS が見つからない」「アクセス権がない」<br>
+        <strong>対応：</strong>
+        ① レジストリの B列（SS ID）にコピペミスがないか<br>
+        ② 該当の店舗SS を直接開いて、アクセスできるか確認<br>
+        ③ SS ID は <code>/d/.../edit</code> の <strong>...</strong> 部分のみ
+      </div>
+    </div>
+
+  </div>
+
+  <h3 class="section-h">最初に試すべき診断（共通の入口）</h3>
+  <div class="steps-h">
+    <div class="step-card system">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="title">期間タブ検出テスト</div>
+        <div class="desc">タブが正しく認識されているか</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="title">レジストリ&amp;ラベル検出</div>
+        <div class="desc">店舗一覧とセクション位置の確認</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="title">テンプレ整合性チェック</div>
+        <div class="desc">テンプレタブの構造に問題がないか</div>
+      </div>
+    </div>
+    <div class="step-card system">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="title">実行ログを見る</div>
+        <div class="desc">GASエディタの「実行数」から</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note alert">
+    <strong>🆘 困った時の最終手段</strong>
+    GASエディタの <span class="kw">変更履歴</span>（左下の時計アイコン）から、過去の動いていた時点のコードに戻すことができます。
+    また、SSは <span class="kw">ファイル → 変更履歴を表示</span> で過去状態に戻せます。
+  </div>
+</section>
+
+</main>
+
+<footer>
+  RL_CYO ダッシュボード v4.0 運用マニュアル図解 / 作成：2026年5月
+</footer>
+
+</body>
+</html>
