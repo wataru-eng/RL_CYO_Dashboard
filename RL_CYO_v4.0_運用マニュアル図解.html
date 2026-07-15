@@ -259,7 +259,7 @@
     <div class="flow-down">↓</div>
     <div class="flow-step-big">👷 作業者が実際の作業（プリント・刺繍など）を行い、判定〇△✕を入力</div>
     <div class="flow-down">↓</div>
-    <div class="flow-step-big">⏰ 毎日 15:00 / 21:00 にGASが自動集計（または手動で「今すぐ更新」）</div>
+    <div class="flow-step-big">⏰ 毎日 11 / 14 / 17時台にGASが自動集計（ホット更新）＋ 毎月1日に全期間再集計（または手動で「今すぐ更新」）</div>
     <div class="flow-down">↓</div>
     <div class="flow-step-big">📊 管理SS のダッシュボードが更新される<br><small style="font-weight:400;color:#64748b">ミス率 / 製作数合計 / 作業者別ミス率 / 送料明細 など</small></div>
   </div>
@@ -356,7 +356,7 @@
       <div class="step-body">
         <div class="title">あとは自動更新トリガーが回り続ける</div>
         <div class="desc">
-          既存の毎日 15:00 / 21:00 のトリガーが、新しい期間タブも自動で拾います。<br>
+          既存の毎日 11 / 14 / 17時台のトリガーが、新しい期間タブも自動で拾います。<br>
           ※ トリガー未設定なら <span class="menu-path">ダッシュボード <span>→</span> <span class="item">自動更新トリガー設定</span></span>
         </div>
       </div>
@@ -439,7 +439,7 @@
       <div class="step-body">
         <div class="title">以降は自動更新でOK</div>
         <div class="desc">
-          毎日 15:00 / 21:00 の自動更新が、新しい期間タブも対象に。
+          毎日 11 / 14 / 17時台の自動更新が、新しい期間タブも対象に。
         </div>
       </div>
     </div>
@@ -541,7 +541,7 @@
     </div>
     <div class="box orange">
       <div class="box-title">⏰ 自動トリガー（GAS）</div>
-      <div class="box-body">毎日 15:00 と 21:00 に <span class="kw">refreshAllDashboards</span> が自動実行</div>
+      <div class="box-body">毎日 11 / 14 / 17時台に <span class="kw">refreshAllDashboards</span>（ホット更新）＋ 毎月1日に <span class="kw">monthlyRefreshAllDashboards</span>（全期間更新）</div>
     </div>
     <div class="box blue">
       <div class="box-title">👀 運営者（渉さん）</div>
@@ -553,11 +553,11 @@
   <div class="system-diagram">
     <div class="flow-step-big">🌅 <strong>朝〜日中</strong>　店舗作業者が検品シートに OCR入力 → 作業 → 判定入力</div>
     <div class="flow-down">↓</div>
-    <div class="flow-step-big">⏰ <strong>15:00</strong>　1回目の自動更新（GASトリガー）<br><small style="font-weight:400;color:#64748b">→ 管理SSのダッシュボードが最新状態に</small></div>
+    <div class="flow-step-big">⏰ <strong>11 / 14 / 17時台</strong>　1日3回の自動更新（GASトリガー・ホット更新）<br><small style="font-weight:400;color:#64748b">→ アクティブ期間＋未完了期間だけ再集計。管理SSとWebAppダッシュボードが最新状態に</small></div>
     <div class="flow-down">↓</div>
     <div class="flow-step-big">🔍 <strong>夕方</strong>　運営者がダッシュボードをチェック</div>
     <div class="flow-down">↓</div>
-    <div class="flow-step-big">⏰ <strong>21:00</strong>　2回目の自動更新（夜分の入力分も反映）</div>
+    <div class="flow-step-big">🗓 <strong>毎月1日</strong>　完了期間も含めた全期間を再集計（コールド更新）<br><small style="font-weight:400;color:#64748b">→ 締め完了後に入った追加作業も月1回で拾う</small></div>
     <div class="flow-down">↓</div>
     <div class="flow-step-big">📊 <strong>翌朝</strong>　ダッシュボードを朝イチで確認、必要に応じて手動更新</div>
   </div>
@@ -597,6 +597,13 @@
   <div class="note info">
     <strong>📌 急ぎで反映したい時</strong>
     自動更新を待たずに、メニュー <span class="menu-path">ダッシュボード <span>→</span> <span class="item">今すぐ更新（全期間）</span></span> でいつでも手動更新可能。
+  </div>
+
+  <div class="note info">
+    <strong>🗂 WebApp ダッシュボードは「全期間」をタブで切替表示</strong><br>
+    WebApp版ダッシュボードは、上部の期間タブ（例：<span class="kw">【Caravan】2026SS</span> / <span class="kw">【常設】2026</span> …）をクリックすると、その期間の集計に切り替わります。<br>
+    ・<strong>初期表示</strong>は、設定タブの <span class="kw">現在のアクティブ期間</span> で指定した期間（変更後は次回の自動/手動更新で反映）。<br>
+    ・<strong>完了した期間</strong>（全店 締めOK）は、毎回は再集計せず<strong>スナップショット表示</strong>（月1回の全期間更新でのみ再集計）。表示が軽く、集計負荷も抑えられます。
   </div>
 </section>
 
